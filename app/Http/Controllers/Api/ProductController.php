@@ -9,13 +9,13 @@ use App\Http\Resources\ProductCollection;
 
 class ProductController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth:api');
-    }
+    // public function __construct()
+    // {
+    //     $this->middleware('auth:api');
+    // }
     public function index()
     {
-        return new ProductCollection(Product::orderBy('id','desc')->paginate(10));
+        return new ProductCollection(Product::orderBy('id','desc')->paginate(5));
     }
 
     public function show($id)
@@ -25,15 +25,20 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        // return $request; 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:250',
             'price' => 'required|numeric',
             'description' => 'required|string',
-            'image' => 'required||image:jpeg,png,jpg|max:2048',
+            'image' => 'required|image:jpeg,png,jpg|max:2048',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'Operation Fail',
+                'data' => $validator->errors()
+            ], 500);
         }
         try {
             $input = $request->all();
@@ -45,11 +50,12 @@ class ProductController extends Controller
                     $image = imagePost($pathImage,$file);      
             }
             $input['image'] = $image;
-            Product::create($input);
+            $data = Product::create($input);
             return response()->json([
                 'success' => true,
-                'message' => 'Operation Successfull'
-            ], 500);
+                'message' => 'Operation Successfull',
+                'data' => $data
+            ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -62,23 +68,29 @@ class ProductController extends Controller
     }
     public function update(Request $request,$id)
     {
-        // return $request->all();
+        //  return $request->all();
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:250',
             'price' => 'required|numeric',
             'description' => 'required|string',
-            'image' => 'required||image:jpeg,png,jpg|max:2048',
+            'image' => 'nullable|image:jpeg,png,jpg|max:2048',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'Operation Fail',
+                'data' => $validator->errors()
+            ], 500);
         }
         try {
            $data = Product::find($id);
             if (!$data) {
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'No product found'
+                    'message' => 'No product found',
+                    'data' => $data
                 ], 500);
             }
             $input = $request->all();
@@ -91,13 +103,14 @@ class ProductController extends Controller
                 if (file_exists($data->image)) {
                     \File::delete($data->image);
                 }     
+                $input['image'] = $image;
             }
-            $input['image'] = $image;
             $data->update($input);
             return response()->json([
                 'success' => true,
-                'message' => 'Operation Successfull'
-            ], 500);
+                'message' => 'Operation Successfull',
+                'data' => $data
+            ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
